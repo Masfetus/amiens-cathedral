@@ -1,0 +1,223 @@
+
+	<html>
+        <head>
+            <title>Transept de la cathédrale d'Amiens</title>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+        </head>
+    
+        <body>
+            <script src="../Libs/three.min.js"></script>
+            <script src="../Libs/OBJLoader.js"></script>
+    
+            <script>
+                var container; 
+                
+                const PI = 3.1415;
+                var camera, scene, renderer;
+                var moveparam = 0.05;
+                var move = {up:false,down:false,right:false,left:false,ctrl:false};
+    
+                function onWindowResize() {
+                  camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize( window.innerWidth, window.innerHeight );
+                }
+    
+                function Init() {
+                    container = document.createElement( 'div' );
+                    document.body.appendChild( container );
+    
+                    camera = new THREE.PerspectiveCamera( 90, window.innerWidth / window.innerHeight, 1, 2000 );
+                    camera.rotation.z=0;
+                    camera.rotation.x=3.14/2;
+                    //camera.rotation.y=0;
+                    
+                    camera.position.z=-20.0; 
+                    camera.position.x=0; 
+                    camera.position.y=-5;
+    
+                    // scene
+                    scene = new THREE.Scene();
+    
+                    var ambient = new THREE.AmbientLight( 0xffffff );
+                    scene.add( ambient );
+    
+                    // texture
+    
+                    var manager = new THREE.LoadingManager();
+                    manager.onProgress = function ( item, loaded, total ) {
+                        console.log( item, loaded, total );
+                    };
+    
+                    var texture = new THREE.Texture();
+    
+                    var loader = new THREE.ImageLoader( manager );
+                    loader.load( '../TranseptSud/TranseptTexture4096.jpg', function ( image ) {
+                        texture.image = image;
+                        texture.needsUpdate = true;
+                        
+                    } );
+    
+                    // Chargement du modèle
+                    var loader = new THREE.OBJLoader( manager );
+                    loader.load( '../TranseptSud/transeptSudBox.obj', function ( object ) {
+                        object.traverse( function ( child ) {
+                            if ( child instanceof THREE.Mesh ) {
+                                child.material.map = texture;
+                            }
+                        } );
+                        scene.add( object );
+                    } );
+                  renderer = new THREE.WebGLRenderer();
+                  renderer.setSize( window.innerWidth, window.innerHeight );
+                  container.appendChild( renderer.domElement );
+                  window.addEventListener( 'resize', onWindowResize, false );
+                  window.requestAnimationFrame(Animer, renderer.domElement);
+                }
+                function Afficher() {
+                    renderer.render(scene,camera);
+                }
+                function Animer(t) {    
+                    Afficher();
+                    window.requestAnimationFrame(Animer, renderer.domElement); 
+                    movement();
+                }
+                function canimovehere()
+                {   
+                    var sentence = {up:false,down:false,left:false,right:false};
+                    
+                    sentence.up = (camera.rotation.x > 0 && camera.rotation.x < PI ?  camera.position.y + moveparam < 9.9 && camera.position.x < 5 && camera.position.x > -5 : camera.position.y + moveparam > -9.9 && camera.position.x < 5 && camera.position.x > -5 )
+                    sentence.down = (camera.rotation.x > 0 && camera.rotation.x < PI ?  camera.position.y - moveparam > -9.9 && camera.position.x < 5 && camera.position.x > -5 : camera.position.y - moveparam < 9.9 && camera.position.x < 5 && camera.position.x > -5 )
+                    sentence.left = (camera.rotation.x > PI/2 && camera.rotation.x < 3*PI/2 ? camera.position.y < 10 && camera.position.y > -10 && camera.position.x + moveparam < 4.9 : camera.position.y < 10 && camera.position.y >-10 && camera.position.x + moveparam > -4.9 )
+                    sentence.right = (camera.rotation.x > PI/2 && camera.rotation.x < 3*PI/2 ?  camera.position.y < 10 && camera.position.y > -10 && camera.position.x -moveparam > -5: camera.position.y > -10 && camera.position.y < 10 && camera.position.x - moveparam < 5 )
+                    
+
+                    return sentence
+
+                }
+                function movement(){
+                    if(move.ctrl&&!move.jump) //bouger son regard
+                    {
+                        if(move.up)
+                        {
+                            camera.rotateX(moveparam);
+                        }
+                        if(move.down)
+                        {
+                            camera.rotateX(-moveparam);
+                        }
+                        if(move.left)
+                        {
+                            camera.rotateY(moveparam);
+                        }
+                        if(move.right)
+                        {
+                            camera.rotateY(-moveparam);
+                        }
+                        camera.rotateZ(0);
+                    }
+                    else if (!move.ctrl&&!move.jump) //se déplacer par rapport a son regard
+                    {
+                        var sentence = canimovehere();
+                        if(move.up && sentence.up)
+                        {
+                            camera.translateZ(-moveparam)
+                        }
+                        if(move.down && sentence.down)
+                        {
+                            camera.translateZ(moveparam)
+                        }
+                        if(move.left  && sentence.left)
+                        {
+                            camera.translateX(-moveparam)
+                        }
+                        if(move.right  && sentence.right)
+                        {
+                            camera.translateX(moveparam)
+                        }
+                        camera.position.z = -20;
+                    }
+                    
+                }
+    
+                document.onkeydown = checkkeyUP;
+                document.onkeyup = checkkeyDOWN;
+
+                function checkkeyUP(e)
+                {
+                    console.log(e.key)
+                    console.log(move);
+                    if(e.key==="ArrowUp")
+                    {
+                        move.up =true;
+                    }
+                    if(e.key==="ArrowDown")
+                    {
+                        move.down=true;
+                    }
+                    if(e.key==="ArrowLeft")
+                    {
+                        move.left=true;
+                    }
+                    if(e.key==="ArrowRight")
+                    {
+                        move.right=true;
+                    }
+                    if(e.key==="Control")
+                    {
+                        move.ctrl=true;
+                    }
+                    if(e.key==="x")
+                    {
+                        camera.rotation.x = PI/2;
+                    }
+                    if(e.key==="y")
+                    {
+                        camera.rotation.y = 0;
+                    }
+                    if(e.key==="z")
+                    {
+                        camera.rotation.z = 0;
+                    }
+                    if(e.key==="Enter")
+                    {
+                        camera.rotation.x = PI/2;
+                        camera.rotation.y = 0;
+                        camera.rotation.z = 0;
+                    }
+                    if(e.key===" ")
+                    {
+                        console.log(camera);
+                    }
+                }
+                function checkkeyDOWN(e)
+                {
+                    if(e.key==="ArrowUp")
+                    {
+                        move.up =false;
+                    }
+                    if(e.key==="ArrowDown")
+                    {
+                        move.down=false;
+                    }
+                    if(e.key==="ArrowLeft")
+                    {
+                        move.left=false;
+                    }
+                    if(e.key==="ArrowRight")
+                    {
+                        move.right=false;
+                    }
+                    if(e.key==="Control")
+                    {
+                        move.ctrl=false;
+                    }
+                }
+    
+               Init();
+    
+            </script>
+    
+        </body>
+    </html>
